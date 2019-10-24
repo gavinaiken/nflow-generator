@@ -153,7 +153,11 @@ func CreateVariablePayload(recordCount int) []NetflowPayload {
 }
 
 func CreateNFlowPayload(recordCount int) []NetflowPayload {
+	if recordCount < 16 {
+		recordCount = 16
+	}
 	payload := make([]NetflowPayload, recordCount)
+	//payload := make([]NetflowPayload, 16)
 	for i := 0; i < recordCount; i++ {
 		payload[0] = CreateHttpFlow()
 		payload[1] = CreateHttpsFlow()

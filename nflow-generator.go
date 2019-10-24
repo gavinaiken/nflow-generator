@@ -35,6 +35,8 @@ var opts struct {
 	CollectorIP   string `short:"t" long:"target" description:"target ip address of the netflow collector"`
 	CollectorPort string `short:"p" long:"port" description:"port number of the target netflow collector"`
 	SpikeProto    string `short:"s" long:"spike" description:"run a second thread generating a spike for the specified protocol"`
+	FlowsPerPkt   int    `short:"w" long:"flows" description:"how many flows per packet to send"`
+	SleepInt      int    `short:"i" long:"interval" description:"how many ms to sleep between sending packets"`
     FalseIndex    bool   `short:"f" long:"false-index" description:"generate false SNMP interface indexes, otherwise set to 0"`
     Help          bool   `short:"h" long:"help" description:"show nflow-generator help"`
 }
@@ -54,6 +56,14 @@ func main() {
 		showUsage()
 		os.Exit(1)
 	}
+	if opts.SleepInt == 0 {
+		opts.SleepInt = 2
+	}
+	if opts.FlowsPerPkt == 0 {
+		opts.FlowsPerPkt = 16
+	}
+	log.Info("using sleep interval: ", opts.SleepInt)
+	log.Info("using flows per packet: ", opts.FlowsPerPkt)
 	collector := opts.CollectorIP + ":" + opts.CollectorPort
 	udpAddr, err := net.ResolveUDPAddr("udp", collector)
 	if err != nil {
@@ -68,7 +78,8 @@ func main() {
 
 	for {
 		rand.Seed(time.Now().Unix())
-		n := randomNum(50, 1000)
+		//n := randomNum(50, 1000)
+		n := 100
 		// add spike data
 		if opts.SpikeProto != "" {
 			GenerateSpike()
@@ -81,7 +92,7 @@ func main() {
 				log.Fatal("Error connecting to the target collector: ", err)
 			}
 		} else {
-			data := GenerateNetflow(16)
+			data := GenerateNetflow(opts.FlowsPerPkt)
 			buffer := BuildNFlowPayload(data)
 			_, err := conn.Write(buffer.Bytes())
 			if err != nil {
@@ -89,11 +100,12 @@ func main() {
 			}
 		}
 		// add some periodic spike data
-		if n < 150 {
-			sleepInt := time.Duration(3000)
-			time.Sleep(sleepInt * time.Millisecond)
-		}
-		sleepInt := time.Duration(n)
+		//if n < 150 {
+			//sleepInt := time.Duration(3000)
+			//time.Sleep(sleepInt * time.Millisecond)
+		//}
+		//sleepInt := time.Duration(n)
+		sleepInt := time.Duration(opts.SleepInt)
 		time.Sleep(sleepInt * time.Millisecond)
 	}
 }
